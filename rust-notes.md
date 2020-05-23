@@ -186,8 +186,16 @@ cargo add rand
 # add specific version of package
 cargo add rand --vers "0.5.5"
 
+# update your build after adding package
+cargo update
+
 # to remove
 cargo rm rand
 ```
 
-- If you don't run the update after installing a package, the next time
+- If you don't run the update after installing a package, the next time you build or run, it will auto update
+- The amazing thing that Rust does for docs is let you investigate the docs for each package installed (and your whole project really) by doing `cargo doc --open`
+
+## Check the program
+- the program has a lot of useful examples, but since everything in it will be covered in more detail later, we'll talk about those parts when we get to them in the book.
+- Chapter references have been listed for relevant sections
