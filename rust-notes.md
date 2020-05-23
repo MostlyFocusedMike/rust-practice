@@ -75,8 +75,13 @@ Cargo is Rust’s build system and package manager. It reminds me a lot of NPM
 # check install and version
 cargo --version
 
-# make a new file
+# make a new project
 cargo new hello_cargo
+
+# initialize an existing project
+mk example
+cd example
+cago init
 ```
 - this command makes a new cargo project, with a `.toml` file and a src folder, with `main.rs`. it also uses git, which you can configure if you want to, but likely never will.
 
@@ -119,3 +124,70 @@ cargo build --release
 ```
 - which will store the build in the /target/release dir instead of the /target/debug dit
 - When you clone down a rust project, like `npm install` first thing you do is `cargo build`
+- Add the /target file to your gitignore, you don't want to commit that data to github (it will include secrets since it's your build)
+
+# Ch. 2: Programming a Guessing Game
+- Use `cargo new` and then insert this into the src main.rs file:
+
+```rs
+use std::io;
+
+fn main() {
+    println!("Guess the number!");
+
+    println!("Please input your guess.");
+
+    let mut guess = String::new();
+
+    io::stdin()
+        .read_line(&mut guess)
+        .expect("Failed to read line");
+
+    println!("You guessed: {}", guess);
+}
+```
+
+## std:io
+- We need to import some things from the standard library and `use` is how to import things
+- we need to import things because rust doesn't want to just import everything in the entire lang, this is a balance
+    - check out what *does* get imported before each program runs, in what is called the [prelude](https://doc.rust-lang.org/stable/std/prelude/index.html)
+- also the `::` is associated function, which means it comes from the type, not an instance of the type (think static functions)
+- We need the io library to process input and output from the console
+
+## Storing Values with Variables
+- in Rust you use `let` to define variables (`const` too)
+- by default variables are immutable, but you can set them to be mutable with `mut`
+
+```rs
+let foo = 12; // immutable
+let mut bar = 43; // mutable
+```
+
+- we're just going to talk about importing crates for now, since more mechanics are fully explained in Ch. 3.
+
+## Using a Crate to Get More Functionality
+- dependencies go in the dependencies section of the toml file
+
+```toml
+[dependencies]
+rand = "0.5.5"
+```
+
+- the version is semantic, and that's technically short for "^0.5.5"
+- To actually load this via the command line instead of manually editing it (which is also fine), you can:
+
+```bash
+# install globally
+cargo install cargo-edit
+
+# add latest version of package
+cargo add rand
+
+# add specific version of package
+cargo add rand --vers "0.5.5"
+
+# to remove
+cargo rm rand
+```
+
+- If you don't run the update after installing a package, the next time
