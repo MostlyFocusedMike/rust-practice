@@ -1,19 +1,13 @@
-#![allow(unused_variables)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
+// #![allow(unused_variables)]
+// #![allow(unused_variables)]
+// #![allow(unused_mut)]
 use std::collections::HashMap;
-// print anything and multiple
-macro_rules! ll {
-  ($( $line:expr),* $(,)?) => {
-      $( println!("{:#?}", $line); )*
-  };
-}
+use std::convert::TryInto;
 
-fn translate_letter(letter: &char, shifter: usize) -> char {
-  let mut alpha: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
+fn letter_translate(letter: &char, shifter: usize) -> char {
+  let alpha: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
   let mut find_alpha = HashMap::new();
   find_alpha.extend((0..26).map(|num| (alpha[num], num)));
-  // ll!(find_alpha.get(&'h').unwrap()); // Some(val) is returned, why we need unwrap https://doc.rust-lang.org/rust-by-example/error/option_unwrap.html
 
   match find_alpha.get(&letter) {
     Some(&index) => alpha[(index + shifter) % 26],
@@ -21,13 +15,24 @@ fn translate_letter(letter: &char, shifter: usize) -> char {
   }
 }
 
-fn main() {
-  translate_letter(&'z', 1);
-  let s = String::from("hello world!");
-  let strings: Vec<char> = s.chars().collect();
+fn message_translate(message: &str, shifter: isize) -> String {
+  let temp_shifter = if shifter < 0 { 26 + shifter } else { shifter };
+  let final_shifter: usize = temp_shifter.try_into().unwrap();
+
   let mut new_string = String::from("");
-  for letter in strings.iter() {
-    new_string.push(translate_letter(&letter, 1));
+  let characters: Vec<char> = message.chars().collect();
+  for letter in characters.iter() {
+    new_string.push(letter_translate(&letter, final_shifter));
   }
-  ll!(new_string);
+  new_string
+}
+
+fn main() {
+  let message = "Hello how are you doing today world? I hope well".to_lowercase();
+  let encoded = message_translate(&message, 7);
+
+  println!("\n\n\tHere is the encoded string: {}\n", encoded);
+  for num in 1..11 {
+    println!("Guess {}: {}", num, message_translate(&encoded, num * -1))
+  }
 }
