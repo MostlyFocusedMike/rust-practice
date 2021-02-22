@@ -3,6 +3,7 @@
 // #![allow(unused_mut)]
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::io;
 
 fn letter_translate(letter: &char, shifter: usize) -> char {
   let alpha: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
@@ -28,7 +29,10 @@ fn message_translate(message: &str, shifter: isize) -> String {
 }
 
 fn main() {
-  let message = "Hello how are you doing today world? I hope well".to_lowercase();
+  let mut guess: String = String::new();
+  io::stdin().read_line(&mut guess).expect("Failed to read line");
+
+  let message = guess.to_lowercase();
   let encoded = message_translate(&message, 7);
 
   println!("\n\n\tHere is the encoded string: {}\n", encoded);

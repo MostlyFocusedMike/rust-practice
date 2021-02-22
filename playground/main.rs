@@ -1,7 +1,17 @@
-fn main() {
-    let mut my_name = "Pascal".to_string();
-    my_name.push_str( " Precht");
+struct Rectangle {
+  width: u32,
+  height: u32,
+}
 
-    let last_name = my_name[7..];
-    println!("{}", last_name);
+fn area(rectangle: &Rectangle) -> u32 {
+  rectangle.width * rectangle.height
+}
+
+fn main() {
+  let rect1 = Rectangle {
+      width: 30,
+      height: 50,
+  };
+
+  println!("The area {} square pixels.", area(&rect1));
 }
