@@ -1,3 +1,10 @@
+mod lib;
+
+use lib::GetNumber;
+
 fn main() {
-    println!("Hello, world!");
+  let thing = GetNumber::new(10);
+
+
+  println!("{:#?}", thing.value());
 }
