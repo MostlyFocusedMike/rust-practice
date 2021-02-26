@@ -5,6 +5,7 @@ struct Author {
     id: i32, // postgres int4 converts to this
     name: String,
     age: i32,
+    books: Vec<Book>
 }
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ struct Book {
     title: String,
     genre: String,
 }
+
 
 impl Author {
     fn new(client: &mut postgres::Client, name: &str, age: i32) -> Result<Author, PgError> {
@@ -27,9 +29,39 @@ impl Author {
             id: query.get("id"),
             name: query.get("name"),
             age: query.get("age"),
+            books: Vec::new(),
         })
     }
 
+    fn get(client: &mut postgres::Client, id: i32) -> Result<Author, PgError> {
+        let query = client.query(
+            "SELECT * FROM authors JOIN books ON authors.id = books.author_id WHERE authors.id = $1;",
+            &[&id],
+        )?;
+
+        let mut books = Vec::new();
+
+        for row in &query {
+            books.push(Book {
+                id: row.get("id"),
+                author_id: row.get("author_id"),
+                title: row.get("title"),
+                genre: row.get("genre"),
+            });
+        }
+
+        let author_query = query.get(0).expect("get author query broke");
+
+        Ok(Author {
+            id: author_query.get("id"),
+            name: author_query.get("name"),
+            age: author_query.get("age"),
+            books,
+        })
+    }
+}
+
+impl Author {
     fn new_book(&self, client: &mut postgres::Client, title: &str, genre: &str) -> Result<Book, PgError> {
         let query = client.query(
             "INSERT INTO books (title, genre, author_id) VALUES ($1, $2, $3) RETURNING *",
@@ -89,12 +121,15 @@ fn main() -> Result<(), PgError> {
 
     init(&mut pg_client)?;
 
-    let bill = Author::new(&mut pg_client, "bill", 32).unwrap();
-    bill.new_book(&mut pg_client, "Terror Tree", "Horror").unwrap();
-    bill.new_book(&mut pg_client, "Death Apple", "Horror").unwrap();
-    let bill_books = bill.books(&mut pg_client).unwrap();
+    let bill = Author::new(&mut pg_client, "bill", 32)?;
+    bill.new_book(&mut pg_client, "Terror Tree", "Horror")?;
+    bill.new_book(&mut pg_client, "Death Apple", "Horror")?;
+    let bill_books = bill.books(&mut pg_client)?;
     println!("{:#?}", bill);
     println!("{:#?}", bill_books);
+
+    let bill_with_books = Author::get(&mut pg_client, bill.id)?;
+    println!("{:#?}", bill_with_books);
 
     Ok(())
 }
