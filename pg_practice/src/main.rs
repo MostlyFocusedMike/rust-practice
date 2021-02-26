@@ -1,86 +1,100 @@
 use postgres::{Client, NoTls, Error as PgError};
-// use std::collections::HashMap;
 
 #[derive(Debug)]
 struct Author {
-    id: i32, // postgres int4 converts to this for some reason,
+    id: i32, // postgres int4 converts to this
     name: String,
     age: i32,
+}
+
+#[derive(Debug)]
+struct Book {
+    id: i32,
+    author_id: i32,
+    title: String,
     genre: String,
 }
 
 impl Author {
-    fn create(pg_client: &mut postgres::Client, name: &str, genre: &str, age: i32) -> Result<Author, PgError> {
-        let query = pg_client.query(
-            "INSERT INTO authors (name, genre, age) VALUES ($1, $2, $3) RETURNING *",
-            &[&name, &genre, &age],
+    fn new(client: &mut postgres::Client, name: &str, age: i32) -> Result<Author, PgError> {
+        let query = client.query(
+            "INSERT INTO authors (name, age) VALUES ($1, $2) RETURNING *",
+            &[&name, &age],
         )?;
-        let query = query.get(0).unwrap();
 
+        let query = query.get(0).expect("new author query broke");
         Ok(Author {
             id: query.get("id"),
             name: query.get("name"),
             age: query.get("age"),
+        })
+    }
+
+    fn new_book(&self, client: &mut postgres::Client, title: &str, genre: &str) -> Result<Book, PgError> {
+        let query = client.query(
+            "INSERT INTO books (title, genre, author_id) VALUES ($1, $2, $3) RETURNING *",
+            &[&title, &genre, &self.id],
+        )?;
+
+        let query = query.get(0).expect("new_book query broke");
+        Ok(Book {
+            id: query.get("id"),
+            title: query.get("title"),
+            author_id: query.get("author_id"),
             genre: query.get("genre"),
         })
     }
+
+    fn books(&self, client: &mut postgres::Client) -> Result<Vec<Book>, PgError> {
+        let mut books = Vec::new();
+        for row in client.query("SELECT * from books WHERE author_id = $1", &[&self.id])? {
+            books.push(Book {
+                id: row.get("id"),
+                author_id: row.get("author_id"),
+                title: row.get("title"),
+                genre: row.get("genre"),
+            });
+        }
+
+        Ok(books)
+    }
 }
 
+fn init(client: &mut postgres::Client) -> Result<(), PgError> {
+    client.batch_execute("
+    CREATE TABLE IF NOT EXISTS authors (
+        id              SERIAL PRIMARY KEY,
+        name            VARCHAR NOT NULL,
+        age             INT NOT NULL,
+        created_at      TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS books  (
+        id              SERIAL PRIMARY KEY,
+        author_id       INTEGER NOT NULL REFERENCES authors,
+        title           VARCHAR NOT NULL,
+        genre           VARCHAR NOT NULL,
+        created_at      TIMESTAMP DEFAULT NOW()
+    );")?;
+
+    client.execute("DELETE FROM books", &[])?;
+    client.execute("DELETE FROM authors", &[])?;
+
+    Ok(())
+}
 
 fn main() -> Result<(), PgError> {
     // This assumes a user/password as "postgres" and a "test" database has already been created
     // This is from the cookbook https://rust-lang-nursery.github.io/rust-cookbook/database/postgres.html
-    let mut client = Client::connect("postgresql://postgres:postgres@localhost/test", NoTls)?;
+    let mut pg_client = Client::connect("postgresql://postgres:postgres@localhost/test", NoTls)?;
 
-    // They use batch execute, but you don't seem to need to for tables
-    client.batch_execute("CREATE TABLE IF NOT EXISTS authors (
-            id              SERIAL PRIMARY KEY,
-            name            VARCHAR NOT NULL,
-            genre           VARCHAR NOT NULL,
-            age             INT NOT NULL
-        )
-    ")?;
+    init(&mut pg_client)?;
 
-    // created_at      TIMESTAMP DEFAULT NOW()
-    client.execute("CREATE TABLE IF NOT EXISTS books  (
-            id              SERIAL PRIMARY KEY,
-            title           VARCHAR NOT NULL,
-            author_id       INTEGER NOT NULL REFERENCES authors
-        )
-    ", &[])?;
-
-    client.execute("DELETE FROM authors", &[])?;
-
-    let bill = Author::create(&mut client, "bill", "Horror", 32).unwrap();
-    let sara = Author::create(&mut client, "sara", "Comedy", 45).unwrap();
-    let bo = Author::create(&mut client, "bo", "Action", 84).unwrap();
+    let bill = Author::new(&mut pg_client, "bill", 32).unwrap();
+    bill.new_book(&mut pg_client, "Terror Tree", "Horror").unwrap();
+    bill.new_book(&mut pg_client, "Death Apple", "Horror").unwrap();
+    let bill_books = bill.books(&mut pg_client).unwrap();
     println!("{:#?}", bill);
-    println!("{:#?}", sara);
-    println!("{:#?}", bo);
-
-
-    // let thing: i32 = bill.get(0).unwrap().get("id");
-    // println!("t {:#?}", thing);
-
-    // for row in bill {
-    //     let author = Author {
-    //         id: row.get("id"),
-    //         name: row.get(1),
-    //         genre: row.get(2),
-    //         age: row.get(3),
-    //     };
-    //     println!("{:#?}", author);
-    // }
-    // // let authors: HashMap<_, _> = author_seed.into_iter().collect();
-
-    // for row in client.query("SELECT id, name, country FROM author", &[])? {
-    //     let author = Author {
-    //         id: row.get(0),
-    //         name: row.get(1),
-    //         country: row.get(2),
-    //     };
-    //     println!("Author {} is from {}, id is {}", author.name, author.country, author.id);
-    // }
+    println!("{:#?}", bill_books);
 
     Ok(())
 }
