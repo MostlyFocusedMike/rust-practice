@@ -1,9 +1,5 @@
 use plotters::prelude::*;
 
-fn same_color(color: plotters::style::RGBColor) -> plotters::style::RGBColor{
-    color
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = BitMapBackend::new("./images/0.png", (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
