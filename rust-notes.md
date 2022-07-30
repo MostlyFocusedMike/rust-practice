@@ -159,6 +159,13 @@ cargo build --release
 - When you clone down a rust project, like `npm install` first thing you do is `cargo build`
 - Add the /target file to your gitignore, you don't want to commit that data to github (it will include secrets since it's your build)
 
+## Running on save 
+You need to install cargo-watch
+```sh
+cargo install cargo-watch # this is a global install
+cargo watch -x run # this will run (the default `cargo watch` just runs `check`)
+```
+
 # Ch. 2: Programming a Guessing Game
 - Use `cargo new` and then insert this into the src main.rs file:
 
@@ -474,13 +481,16 @@ let a = [3; 5];
 // [3, 3, 3, 3, 3]
 ```
 
-- Accessing uses brackets instead of dot
+- Accessing uses brackets instead of dot (dots are only for tuples)
 
 ```rust
     let a = [1, 2, 3, 4, 5];
-    let two = a.1
+    let two = a[1]
 
 
     ll!(two);
 ```
 
+## Another book
+https://www.cs.brandeis.edu/~cs146a/rust/doc-02-21-2015/book/README.html
+I don't really know what that book is or who wrote it but it's great
