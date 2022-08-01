@@ -12,6 +12,7 @@ Here are my rust notes. Primarily based off the Book of Rust
   - [1.3 Hello, Cargo!](#13-hello-cargo)
     - [the Cargo.toml](#the-cargotoml)
     - [Building and Running a Cargo Project](#building-and-running-a-cargo-project)
+  - [Running on save](#running-on-save)
 - [Ch. 2: Programming a Guessing Game](#ch-2-programming-a-guessing-game)
   - [std:io](#stdio)
   - [Storing Values with Variables](#storing-values-with-variables)
@@ -32,6 +33,14 @@ Here are my rust notes. Primarily based off the Book of Rust
   - [Compound Types](#compound-types)
   - [Tuples](#tuples)
   - [Arrays](#arrays)
+  - [Functions](#functions)
+- [Ch 4: Understanding ownership](#ch-4-understanding-ownership)
+  - [Movement and copying](#movement-and-copying)
+  - [Functions and , and returning values and scope](#functions-and--and-returning-values-and-scope)
+  - [References and borrowing](#references-and-borrowing)
+  - [Mutable References](#mutable-references)
+  - [Dangling References](#dangling-references)
+  - [Another book](#another-book)
 
 # Ch.1 Getting Started
 
@@ -351,8 +360,11 @@ println!("{}", x);
 - In development, warnings will fire if you overflow an integer type, but in production releases the variable will just wrap (so 255 would wrap back to 0) unless you use:
 
 > Wrap in all modes with the wrapping_* methods, such as wrapping_add
+>
 > Return the None value if there is overflow with the checked_* methods
+>
 > Return the value and a boolean indicating whether there was overflow with the overflowing_* methods
+>
 > Saturate at the value's minimum or maximum values with saturating_* methods
 
 ## Floating Point
@@ -489,6 +501,290 @@ let a = [3; 5];
 
 
     ll!(two);
+```
+
+
+## Functions 
+Rust uses snake case on function and variable names. Rust also has implicit returns if you omit the ";" at the end of the line. You can also explicit return. When returning a value, you need to add `->` and the type that gets returned. Also, when defining parameters, you must explicitly type each one. 
+
+```rs
+fn main() {
+    another_function(5);
+}
+
+fn another_function(x: i32) {
+    println!("The value of x is: {x}");
+}
+
+fn five() -> i32 {
+    5
+}
+fn five_too() -> i32 {
+    return 5
+}
+```
+
+> Statements are instructions that perform some action and do not return a value. Expressions evaluate to a resulting value.
+
+You can return an expression from a function. But remember adding the ; at the changes expressions to statements
+
+# Ch 4: Understanding ownership
+- There's a unique concept in Rust to handle memory allocation. Instead of using a garbage collector or having the dev decide memory management, Rust uses a system of ownership to handle things, and won't compile if any rules are broken
+
+- Stack is for fixed length, knowable memory allocation at compile time, heap is for unknowable things that can change size (like vectors and Strings)
+
+- The concept of ownership needs more complext data types to work: 
+
+```rust
+// fine
+fn munch(num: i32) {
+  println!("{}", num);
+}
+fn main() {
+  let num1 = 12;
+  munch(num1);
+  munch(num1);
+}
+
+// about to find out why this fails
+fn munch(word: String) {
+  println!("{}", word);
+}
+fn main() {
+  let word = String::from("hi there");
+  munch(word);
+  munch(word);
+}
+```
+- Ownership only comes into play when dealing with heap variables. Basically, anything that can be **truly** mutated (not just reassigned like _mut_) deals with ownership
+
+- the three main rules of ownership are: 
+  1. Each value in Rust has an owner.
+  1. There can only be one owner at a time.
+  1. When the owner goes out of scope, the value will be dropped.
+
+
+```rs
+{
+  let s = String::from("hello"); // s is valid from this point forward
+        // do stuff with s
+} 
+// this scope is now over, and s is no longer valid
+```
+- once we move out of the brackets `s` goes out of scope, and so rust calls the `drop` function internally
+
+## Movement and copying 
+example: 
+
+```rs
+let s1 = String::from("hello");
+let s2 = s1;
+println!("{}, world!", s1);
+```
+the value of s1 saves a pointer to the heap for the String value. It then copies this pointer to `s2`, but not the value on the heap. 'This is a problem: when s2 and s1 go out of scope, they will both try to free the same memory.' This is called a double free error and leads to security and corruption concerns.
+
+Because of this, when rust "copies" a pointer in this way, it actually calls it a "move." So in the above example, once you copy s1 to s2, you can no longer reference s1, it is already dropped. 
+
+By deafualt, rust will not clone values on the heap, if you want that, to make 2 truly distinct values, you can use `clone()` or other cloning methods. 
+
+```rs
+fn main() {
+    let s1 = String::from("hello");
+    let s2 = s1.clone();
+
+    println!("s1 = {}, s2 = {}", s1, s2);
+}
+```
+
+- stack variables do not need to be cloned, as they are primitives on the stack, so it's easy to truly copy their values around when needed: 
+
+```rs
+fn main() {
+    let x = 5;
+    let y = x;
+
+    println!("x = {}, y = {}", x, y);
+}
+```
+You can annotate a type with Copy if you want, however Rust will block you if any part of this type already had the `Drop` trait
+
+Here are some of the built in types with Copy: 
+
+- All the integer types, such as u32.
+- The Boolean type, bool, with values true and false.
+- All the floating point types, such as f64.
+- The character type, char.
+- Tuples, if they only contain types that also implement Copy. For example, (i32, i32) implements Copy, but (i32, String) does not.
+
+
+## Functions and , and returning values and scope 
+Functions take ownership, just like variable assignments do. 
+
+
+```rs 
+fn main() {
+  let s = String::from("hello");  // s comes into scope
+
+  takes_ownership(s);             // s's value moves into the function...
+                                  // ... and so is no longer valid here
+
+  let x = 5;                      // x comes into scope
+
+  makes_copy(x);                  // x would move into the function,
+                                  // but i32 is Copy, so it's okay to still
+                                  // use x afterward
+
+} // Here, x goes out of scope, then s. But because s's value was moved, nothing
+  // special happens.
+
+fn takes_ownership(some_string: String) { // some_string comes into scope
+    println!("{}", some_string);
+} // Here, some_string goes out of scope and `drop` is called. The backing
+  // memory is freed.
+
+fn makes_copy(some_integer: i32) { // some_integer comes into scope
+    println!("{}", some_integer);
+} // Here, some_integer goes out of scope. Nothing special happens.
+```
+
+```rs 
+fn main() {
+  let s1 = gives_ownership();         // gives_ownership moves its return
+                                      // value into s1
+
+  let s2 = String::from("hello");     // s2 comes into scope
+
+  let s3 = takes_and_gives_back(s2);  // s2 is moved into
+                                      // takes_and_gives_back, which also
+                                      // moves its return value into s3
+} // Here, s3 goes out of scope and is dropped. s2 was moved, so nothing
+  // happens. s1 goes out of scope and is dropped.
+
+fn gives_ownership() -> String {          // gives_ownership will move its
+                                          // return value into the function
+                                          // that calls it
+
+  let some_string = String::from("yours"); // some_string comes into scope
+
+  some_string                             // some_string is returned and
+                                          // moves out to the calling
+                                          // function
+}
+
+// This function takes a String and returns one
+fn takes_and_gives_back(a_string: String) -> String { // a_string comes into
+                                                      // scope
+
+    a_string  // a_string is returned and moves out to the calling function
+}
+```
+- all this transfer of ownership can be tedious. Sometimes, you just want to temporarily borrow something 
+
+## References and borrowing
+This is valid but annoying 
+
+```rs
+fn main() {
+    let s1 = String::from("hello");
+
+    let (s2, len) = calculate_length(s1);
+
+    println!("The length of '{}' is {}.", s2, len);
+}
+
+fn calculate_length(s: String) -> (String, usize) {
+    let length = s.len(); // len() returns the length of a String
+
+    (s, length)
+}
+```
+We just want to read the value, not much. 
+
+Instead we can use a `reference` to the String.
+> A reference is like a pointer in that it’s an address we can follow to access the data stored at that address; that data is owned by some other variable. Unlike a pointer, a reference is guaranteed to point to a valid value of a particular type for the life of that reference.
+
+Basically if you just want to read, use a reference. The way to use and the way you annotate Type is with `&`:
+
+```rs 
+fn main() {
+    let s1 = String::from("hello");
+    let len = calculate_length(&s1);
+    println!("The length of '{}' is {}.", s1, len);
+}
+
+fn calculate_length(s: &String) -> usize {
+    s.len()
+}
+```
+With references you can use them as many times as you want. 
+
+But you *can* mutate a borrowed reference if you *really* want to: 
+
+## Mutable References
+fn main() {
+    let mut s = String::from("hello");
+
+    change(&mut s);
+}
+
+fn change(some_string: &mut String) {
+    some_string.push_str(", world");
+}
+
+
+> Mutable references have one big restriction: if you have a mutable reference to a value, you can have no other references to that value. This code that attempts to create two mutable references to s will fail:
+
+```rs 
+let mut s = String::from("hello");
+
+let r1 = &mut s;
+let r2 = &mut s;
+
+println!("{}, {}", r1, r2);
+```
+
+Blocking this behavrior prevents race conditions.
+
+You also can't use both immutable and mutable references together in the same scope:
+
+```rs 
+ let mut s = String::from("hello");
+
+let r1 = &s; // no problem
+let r2 = &s; // no problem
+let r3 = &mut s; // BIG PROBLEM
+
+println!("{}, {}, and {}", r1, r2, r3);
+```
+In order to get the mutable reference functionality back, you have to drop the 
+
+```rs
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &s; // no problem
+    let r2 = &s; // no problem
+    println!("{} and {}", r1, r2);
+    // variables r1 and r2 will not be used after this point
+
+    let r3 = &mut s; // no problem
+    println!("{}", r3);
+}
+
+```
+## Dangling References 
+
+Rust blocks dangling references (a pointer that points at something on the heap that's already been dropped or given to something else)
+
+```rs
+fn main() {
+    let reference_to_nothing = dangle(); // BAD BAD
+}
+
+fn dangle() -> &String {
+    let s = String::from("hello");
+    &s  
+}
 ```
 
 ## Another book
