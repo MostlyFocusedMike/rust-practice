@@ -1,17 +1,13 @@
-struct Rectangle {
-  width: u32,
-  height: u32,
-}
-
-fn area(rectangle: &Rectangle) -> u32 {
-  rectangle.width * rectangle.height
+fn arr_rec(arr: [usize; 4], idx: usize) {
+  if arr.len() < idx {
+    println!("DONE!");
+    return;
+  }
+  println!("{}", arr[idx]);
+  arr_rec(arr, idx + 1);
 }
 
 fn main() {
-  let rect1 = Rectangle {
-      width: 30,
-      height: 50,
-  };
-
-  println!("The area {} square pixels.", area(&rect1));
+  let arr = [1,2,3,4];
+  arr_rec(arr, 0);
 }
